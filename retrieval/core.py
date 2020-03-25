@@ -26,7 +26,6 @@ def transit_depth(temperature):
     """
     wavenumber, kappa = water_opacity(temperature)
 
-
     g = G * M_jup / R_jup**2
     rstar = 1 * R_sun
 

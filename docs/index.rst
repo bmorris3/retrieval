@@ -22,6 +22,7 @@ Here's a simple example:
     ax.set_xlabel('Wavelength [$\mu$m]')
     ax.set_ylabel('Transit depth')
     ax.legend()
+    plt.tight_layout()
     plt.show()
 
 
