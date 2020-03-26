@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 
 __all__ = ['Spectrum']
 
@@ -12,8 +13,9 @@ class Spectrum(object):
     flux, transit depth, etc.
     """
     def __init__(self, wavelength, flux):
-        self.wavelength = wavelength
-        self.flux = flux
+        sort = np.argsort(wavelength)
+        self.wavelength = wavelength[sort]
+        self.flux = flux[sort]
 
     def plot(self, ax=None, **kwargs):
         """
