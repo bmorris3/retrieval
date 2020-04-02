@@ -25,13 +25,15 @@ def lnprior(theta):
 def lnlikelihood(theta):
     temperature = theta[0] * u.K
     model = planet.transit_depth(temperature).flux
-    return -0.5 * np.sum((example_spectrum[:, 1] - model)**2 /
-                         example_spectrum[:, 2]**2)
+    lp = lnprior(theta)
+    return lp + -0.5 * np.sum((example_spectrum[:, 1] - model)**2 /
+                               example_spectrum[:, 2]**2)
 
 nwalkers = 10
 ndim = 1
 
-p0 = [[1500 + 10 * np.random.randn()] for i in range(nwalkers)]
+p0 = [[1500 + 10 * np.random.randn()]
+      for i in range(nwalkers)]
 
 with Pool() as pool:
     sampler = EnsembleSampler(nwalkers, ndim, lnlikelihood, pool=pool)

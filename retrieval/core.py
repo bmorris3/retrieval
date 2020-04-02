@@ -16,6 +16,18 @@ class Planet(object):
     Properties of an exoplanet.
     """
     def __init__(self, mass, radius, pressure, mu):
+        """
+        Parameters
+        ----------
+        mass : `~astropy.unit.Quantity`
+            Mass of the transiting planet
+        radius : `~astropy.unit.Quantity`
+            Radius of the transiting planet
+        pressure : `~astropy.unit.Quantity`
+            Pressure level probed in transmission
+        mu : `~astropy.unit.Quantity`
+            Mean molecular weight of the atmosphere
+        """
         self.mass = mass
         self.radius = radius
         self.pressure = pressure
@@ -28,6 +40,10 @@ class Planet(object):
         Parameters
         ----------
         temperature : `~astropy.units.Quantity`
+            Temperature of the atmosphere observed in transmission
+        rstar : `~astropy.units.Quantity`
+            Radius of the star, used to compute the ratio of the planet-to-star
+            radius. Default is one solar radius.
 
         Returns
         -------
