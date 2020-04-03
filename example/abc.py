@@ -16,16 +16,16 @@ def distance(theta):
     temperature = theta[0] * u.K
     model = planet.transit_depth(temperature).flux
     return np.sum((example_spectrum[:, 1] - model)**2 /
-                  example_spectrum[:, 2]**2)
+                  example_spectrum[:, 2]**2) / example_spectrum.shape[0]
 
-init_temp = 1480
+init_temp = 1500
 
 distance_chain = [distance([init_temp])]
 temperature_chain = [init_temp]
 
-n_steps = 1000
+n_steps = 5000
 
-threshold = 1.5
+threshold = 1
 i = 0
 total_steps = 1
 
