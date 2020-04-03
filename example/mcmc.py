@@ -5,9 +5,10 @@ from retrieval import Planet
 
 import numpy as np
 import astropy.units as u
+import matplotlib.pyplot as plt
+
 from emcee import EnsembleSampler
 from multiprocessing import Pool
-import matplotlib.pyplot as plt
 
 example_spectrum = np.load('../retrieval/data/example_spectrum.npy')
 
