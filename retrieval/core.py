@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import astropy.units as u
 from astropy.constants import G, k_B
@@ -6,9 +7,19 @@ from .opacity import water_opacity
 from .spectrum import Spectrum
 
 
-__all__ = ['Planet']
+__all__ = ['Planet', 'get_example_spectrum']
 
 gamma = 0.57721
+
+
+def get_example_spectrum():
+    """
+    Load the example spectrum, with temperature 1500 K.
+    """
+    example_spectrum_path = os.path.join(os.path.dirname(__file__), 'data',
+                                         'example_spectrum.npy')
+    example_spectrum = np.load(example_spectrum_path)
+    return example_spectrum
 
 
 class Planet(object):
