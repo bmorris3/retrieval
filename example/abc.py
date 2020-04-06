@@ -1,13 +1,14 @@
 import sys
 sys.path.insert(0, '../')
 
-from retrieval import Planet
+from retrieval import Planet, get_example_spectrum
 
 import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
+from sklearn.metrics import r2_score
 
-example_spectrum = np.load('../retrieval/data/example_spectrum.npy')
+example_spectrum = get_example_spectrum()
 
 planet = Planet(1 * u.M_jup, 1 * u.R_jup, 1e-3 * u.bar, 2.2 * u.u)
 
@@ -15,14 +16,14 @@ planet = Planet(1 * u.M_jup, 1 * u.R_jup, 1e-3 * u.bar, 2.2 * u.u)
 def distance(theta):
     temperature = theta[0] * u.K
     model = planet.transit_depth(temperature).flux
-    return np.sum((example_spectrum[:, 1] - model)**2 /
-                  example_spectrum[:, 2]**2) / example_spectrum.shape[0]
+    return abs(r2_score(example_spectrum[:, 1], model) - 1)
 
 
 init_temp = 1500
-n_steps = 1000
+n_steps = 1500
 
-thresholds = [1.5, 1.1, 1.0]
+#thresholds = [1.5, 1.1, 1.0]
+thresholds = [0.8, 0.4, 0.25]
 
 for threshold in thresholds:
     # Create chains for the distance and temperature
@@ -37,7 +38,7 @@ for threshold in thresholds:
     while len(temperature_chain) < n_steps:
         # Generate a trial temperature
         total_steps += 1
-        trial_temp = temperature_chain[i] + 10 * np.random.randn()
+        trial_temp = temperature_chain[i] + 100 * np.random.randn()
 
         # Measure the distance between the trial step and observations
         trial_dist = distance([trial_temp])
