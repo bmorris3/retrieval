@@ -85,7 +85,7 @@ First we will access the pre-generated example spectrum contained within the
 
 The transit depth spectrum spans the near-infrared, where water opacity is
 significant, giving rise to the J, H and K bands visible in this transmission
-spectrum near 1.2, 1.6, and 2.2 :math:`\mu`m, for example.
+spectrum near 1.2, 1.6, and 2.2 microns, for example.
 
 Now we create an instance of the `~retrieval.Planet` object, which requires us
 to specify the planet's mass, radius, atmospheric pressure and mean molecular
