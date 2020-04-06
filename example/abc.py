@@ -42,7 +42,7 @@ def distance(theta):
 init_temp = 1500
 n_steps = 1500
 
-thresholds = [1e-3, 2e-4, 1e-4]
+thresholds = [3e-4, 2e-4, 1e-4]
 
 for threshold in thresholds:
     # Create chains for the distance and temperature

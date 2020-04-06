@@ -47,7 +47,6 @@ Gaussian uncertainties using a likelihood function and Markov Chain Monte Carlo
 defining a proper likelihood.
 
 
-
 :math:`\chi^2` minimization
 +++++++++++++++++++++++++++
 
@@ -63,9 +62,8 @@ First we will access the pre-generated example spectrum contained within the
     import astropy.units as u
 
     example_spectrum = get_example_spectrum()
-    wavelength, transit_depth = example_spectrum[:, 0], example_spectrum[:, 1]
 
-    plt.plot(wavelength, transit_depth)
+    plt.plot(example_spectrum[:, 0], example_spectrum[:, 1])
     plt.xlabel('Wavelength [$\mu$m]')
     plt.ylabel('Transit Depth')
     plt.show()
@@ -87,7 +85,7 @@ First we will access the pre-generated example spectrum contained within the
 
 The transit depth spectrum spans the near-infrared, where water opacity is
 significant, giving rise to the J, H and K bands visible in this transmission
-spectrum.
+spectrum near 1.2, 1.6, and 2.2 :math:`\mu`m, for example.
 
 Now we create an instance of the `~retrieval.Planet` object, which requires us
 to specify the planet's mass, radius, atmospheric pressure and mean molecular
@@ -127,16 +125,16 @@ The resulting best-fit temperature is::
 
 which is close to the temperature used to generate the example spectrum, so we
 have demonstrated that the forward model is producing a sufficient approximation
-to the observed spectrum.
+to the observed spectrum. It was straightforward in this example above to fit
+for the temperature, but it will take a bit more effort to find the uncertainty
+on the temperature.
 
 MCMC with a likelihood
 ++++++++++++++++++++++
 
-It was straightforward in the example above to fit for the temperature, but it
-may take a bit more effort to find the uncertainty on the temperature. One
-computationally expensive but easy-to-implement technique for measuring the
-uncertainty on the fitting parameter (temperature) is with `Markov Chain Monte
-Carlo <https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo>`_. MCMC is a
+One computationally expensive but easy-to-implement technique for measuring the
+uncertainty on the fitting parameter is `Markov Chain Monte Carlo
+(MCMC) <https://en.wikipedia.org/wiki/Markov_chain_Monte_Carlo>`_. MCMC is a
 Bayesian technique, and uses some of the concepts straight out of `Bayes'
 theorem <https://en.wikipedia.org/wiki/Bayes%27_theorem>`_,
 
@@ -147,10 +145,10 @@ theorem <https://en.wikipedia.org/wiki/Bayes%27_theorem>`_,
 The prior distribution, denoted by :math:`\pi(\theta)`, represents your prior
 beliefs about the fitting parameters :math:`\theta`.
 
-The likelihood function, denoted by :math:`{\cal L}( D \vert \theta)`, is the
-mathematical relationship between the data (:math:`D`), model and
-measurement noise. The goal of MCMC is to numerically evaluate the right hand
-side of the equation to solve for the posterior distribution
+The likelihood function, :math:`{\cal L}( D \vert \theta)`, is the relationship
+between the data (:math:`D`), model and measurement noise. The goal of MCMC is
+to numerically evaluate the numerator in the equation on the right hand side of
+the equation to solve for the posterior distribution
 :math:`P\left( \theta \vert D \right)`.
 
 To do so, we must first describe the prior and likelihood, respectively:
@@ -180,9 +178,9 @@ To do so, we must first describe the prior and likelihood, respectively:
                                    example_spectrum[:, 2]**2)
 
 
-We've chosen a flat prior that expects the temperature to sit between 500 and
-5000 K, which might represent our sensible rough estimates for the minimum and
-maximum temperature a planet might have given its orbital distance and host
+We've chosen a flat log-prior that expects the temperature to sit between 500
+and 5000 K, which might represent our sensible rough estimates for the minimum
+and maximum temperature a planet might have given its orbital distance and host
 star's spectral type. The log-likelihood we have chosen for this example is
 the sum of the log-prior and :math:`-0.5 \chi^2`. This is a natural choice for
 the likelihood given Gaussian, uncorrelated uncertainties for the transit depth
@@ -251,8 +249,8 @@ We can now sample the posterior distribution with MCMC using
     plt.show()
 
 The algorithm produces a "chain" of posterior samples for the temperature of the
-atmosphere, which we see is roughly Gaussian in shape and centered near 1510 K
-with an uncertainty of roughly 10 K.
+atmosphere, which we see is roughly Gaussian in shape, yielding a temperature
+measurement of :math:`T \approx 1510 \pm 10` K.
 
 ABC without a likelihood
 ++++++++++++++++++++++++
@@ -279,6 +277,16 @@ atmosphere, which drives changes in the absorption band depth.
 Below, let's plot water's near-infrared transparency feature which we usually
 call the H band (orange), and the water absorption band at just-shorter
 wavelengths than the H band (green), and the rest of the spectrum (blue).
+
+.. code-block:: python
+
+    on_h_band = np.abs(wavelength - 1.65) < 0.1
+    off_h_band = np.abs(wavelength - 1.425) < 0.1
+
+    depth_on = transit_depth[on_h_band].mean()
+    depth_off = transit_depth[off_h_band].mean()
+    depth_difference_observed = (depth_off - depth_on) / depth_off
+
 
 .. plot::
 
@@ -329,10 +337,10 @@ band depth in the observed spectrum.
                                          model[off_h_band].mean())
         return abs(depth_difference_simulated - depth_difference_observed)
 
-In a sense, this is a dimensionality reduction step, because we're reducing the
+This is a dimensionality reduction step because we're reducing the
 entire spectrum to a single number. One must take care to choose a summary
 statistic which unambiguously varies with the fitting parameters of interest --
-in general it is not impossible to prove that your choice of summary statistic
+in general it is not possible to prove that your choice of summary statistic
 is "sufficient".
 
 Next we construct a simple rejection sampling algorithm, which varies the
@@ -345,11 +353,10 @@ decreases:
 
 .. code-block:: python
 
-
     init_temp = 1500
     n_steps = 1500
 
-    thresholds = [1e-3, 2e-4, 1e-4]
+    thresholds = [3e-4, 2e-4, 1e-4]
 
     for threshold in thresholds:
         # Create chains for the distance and temperature
@@ -387,7 +394,6 @@ decreases:
     plt.show()
 
 
-
 .. plot::
 
     from retrieval import Planet, get_example_spectrum
@@ -423,7 +429,7 @@ decreases:
     init_temp = 1500
     n_steps = 1500
 
-    thresholds = [1e-3, 2e-4, 1e-4]
+    thresholds = [3e-4, 2e-4, 1e-4]
 
     for threshold in thresholds:
         # Create chains for the distance and temperature
@@ -466,3 +472,8 @@ represents the trade off between precision in the posterior approximation and
 computation time. The posterior distribution approximations should converge
 towards the "true" posterior distribution which you might recover with
 *non*-approximate Bayesian inference techniques like MCMC.
+
+Taking the most computationally expensive and most accurate posterior
+approximation above (green), we estimate the temperature
+:math:`T \approx 1515 \pm 15` K, roughly consistent with the expectation
+from MCMC above.
