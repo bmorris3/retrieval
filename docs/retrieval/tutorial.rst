@@ -263,20 +263,93 @@ computation <https://en.wikipedia.org/wiki/Approximate_Bayesian_computation>`_,
 a technique for estimating posterior distributions without computing a
 likelihood.
 
-Central to the idea of
+Let's imagine for a moment that the spectrum we're trying to retrieve has
+been observed at very high resolution, with millions or billions of spectral
+channels, making the :math:`\chi^2` expensive to compute. In this case, it is
+computationally more efficient to compute a *summary statistic* which reduces
+the dimensionality of the problem.
+
+We can use domain knowledge to construct a summary statistic that has some
+physically sensible meaning. In this tutorial we will use the difference in
+transit depth on and off of a water absorption band as a summary
+statistic for the ABC technique. In this tutorial, the only free parameter is
+the temperature, so varying the temperature will vary the scale height of the
+atmosphere, which drives changes in the absorption band depth.
+
+Below, let's plot water's near-infrared transparency feature which we usually
+call the H band (orange), and the water absorption band at just-shorter
+wavelengths than the H band (green), and the rest of the spectrum (blue).
+
+.. plot::
+
+    from retrieval import Planet, get_example_spectrum
+
+    import numpy as np
+    import astropy.units as u
+    import matplotlib.pyplot as plt
+
+    np.random.seed(42)
+
+    example_spectrum = get_example_spectrum()
+    wavelength, transit_depth = example_spectrum[:, 0], example_spectrum[:, 1]
+
+    planet = Planet(1 * u.M_jup, 1 * u.R_jup, 1e-3 * u.bar, 2.2 * u.u)
+
+    on_h_band = np.abs(wavelength - 1.65) < 0.1
+    off_h_band = np.abs(wavelength - 1.425) < 0.1
+
+    depth_on = transit_depth[on_h_band].mean()
+    depth_off = transit_depth[off_h_band].mean()
+    depth_difference_observed = (depth_off - depth_on) / depth_off
+
+    plt.plot(wavelength, transit_depth)
+    plt.plot(wavelength[on_h_band], transit_depth[on_h_band])
+    plt.axhline(depth_on, color='C1', ls='--')
+    plt.plot(wavelength[off_h_band], transit_depth[off_h_band])
+    plt.axhline(depth_off, color='C2', ls='--')
+    plt.xlim([1.25, 1.8])
+    plt.xlabel('Wavelength [$\mu$m]')
+    plt.ylabel('Transit depth')
+    plt.show()
+
+The "band depth," or mean difference in transit depth on and off of this
+water absorption feature, is proportional to the temperature of the atmosphere
+in this toy model. We can therefore define a "distance" between the observed
+spectrum and simulated (forward) models of the spectrum which is simply the
+absolute difference between the band depth in the simulated spectrum and the
+band depth in the observed spectrum.
 
 .. code-block:: python
-
-    from sklearn.metrics import r2_score
 
     def distance(theta):
         temperature = theta[0] * u.K
         model = planet.transit_depth(temperature).flux
-        return abs(r2_score(example_spectrum[:, 1], model) - 1)
+        depth_difference_simulated = abs((model[off_h_band].mean() -
+                                          model[on_h_band].mean()) /
+                                         model[off_h_band].mean())
+        return abs(depth_difference_simulated - depth_difference_observed)
+
+In a sense, this is a dimensionality reduction step, because we're reducing the
+entire spectrum to a single number. One must take care to choose a summary
+statistic which unambiguously varies with the fitting parameters of interest --
+in general it is not impossible to prove that your choice of summary statistic
+is "sufficient".
+
+Next we construct a simple rejection sampling algorithm, which varies the
+temperature by a small amount, and tests the difference in band depth between
+the simulated and observed spectra. If the difference is within some *tolerance*
+specified by the user, the step is accepted into a chain, or otherwise it is
+discarded. We repeat this procedure for three different tolerances to
+demonstrate how the variance of the posterior decreases as the tolerance
+decreases:
 
 .. code-block:: python
 
-    thresholds = [0.8, 0.4, 0.25]
+
+    init_temp = 1500
+    n_steps = 1500
+
+    thresholds = [1e-3, 2e-4, 1e-4]
 
     for threshold in thresholds:
         # Create chains for the distance and temperature
@@ -291,7 +364,7 @@ Central to the idea of
         while len(temperature_chain) < n_steps:
             # Generate a trial temperature
             total_steps += 1
-            trial_temp = temperature_chain[i] + 100 * np.random.randn()
+            trial_temp = temperature_chain[i] + 10 * np.random.randn()
 
             # Measure the distance between the trial step and observations
             trial_dist = distance([trial_temp])
@@ -322,23 +395,35 @@ Central to the idea of
     import numpy as np
     import astropy.units as u
     import matplotlib.pyplot as plt
-    from sklearn.metrics import r2_score
+
+    np.random.seed(42)
 
     example_spectrum = get_example_spectrum()
+    wavelength, transit_depth = example_spectrum[:, 0], example_spectrum[:, 1]
 
     planet = Planet(1 * u.M_jup, 1 * u.R_jup, 1e-3 * u.bar, 2.2 * u.u)
+
+    on_h_band = np.abs(wavelength - 1.65) < 0.1
+    off_h_band = np.abs(wavelength - 1.425) < 0.1
+
+    depth_on = transit_depth[on_h_band].mean()
+    depth_off = transit_depth[off_h_band].mean()
+    depth_difference_observed = (depth_off - depth_on) / depth_off
 
 
     def distance(theta):
         temperature = theta[0] * u.K
         model = planet.transit_depth(temperature).flux
-        return abs(r2_score(example_spectrum[:, 1], model) - 1)
+        depth_difference_simulated = abs((model[off_h_band].mean() -
+                                          model[on_h_band].mean()) /
+                                         model[off_h_band].mean())
+        return abs(depth_difference_simulated - depth_difference_observed)
 
 
     init_temp = 1500
     n_steps = 1500
 
-    thresholds = [0.8, 0.4, 0.25]
+    thresholds = [1e-3, 2e-4, 1e-4]
 
     for threshold in thresholds:
         # Create chains for the distance and temperature
@@ -353,7 +438,7 @@ Central to the idea of
         while len(temperature_chain) < n_steps:
             # Generate a trial temperature
             total_steps += 1
-            trial_temp = temperature_chain[i] + 100 * np.random.randn()
+            trial_temp = temperature_chain[i] + 10 * np.random.randn()
 
             # Measure the distance between the trial step and observations
             trial_dist = distance([trial_temp])
@@ -375,4 +460,9 @@ Central to the idea of
     plt.xlabel('Temperature [K]')
     plt.show()
 
-
+In the above approximate posterior distributions, the variance of the posterior
+decreases as the tolerance :math:`h` decreases. The parameter :math:`h`
+represents the trade off between precision in the posterior approximation and
+computation time. The posterior distribution approximations should converge
+towards the "true" posterior distribution which you might recover with
+*non*-approximate Bayesian inference techniques like MCMC.

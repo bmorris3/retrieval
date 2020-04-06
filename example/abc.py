@@ -6,24 +6,43 @@ from retrieval import Planet, get_example_spectrum
 import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
-from sklearn.metrics import r2_score
+
+np.random.seed(42)
 
 example_spectrum = get_example_spectrum()
+wavelength, transit_depth = example_spectrum[:, 0], example_spectrum[:, 1]
 
 planet = Planet(1 * u.M_jup, 1 * u.R_jup, 1e-3 * u.bar, 2.2 * u.u)
+
+on_h_band = np.abs(wavelength - 1.65) < 0.1
+off_h_band = np.abs(wavelength - 1.425) < 0.1
+
+depth_on = transit_depth[on_h_band].mean()
+depth_off = transit_depth[off_h_band].mean()
+depth_difference_observed = (depth_off - depth_on) / depth_off
+
+plt.plot(wavelength, transit_depth)
+plt.plot(wavelength[on_h_band], transit_depth[on_h_band])
+plt.axhline(depth_on, color='C1', ls='--')
+plt.plot(wavelength[off_h_band], transit_depth[off_h_band])
+plt.axhline(depth_off, color='C2', ls='--')
+plt.xlim([1.25, 1.8])
+plt.show()
 
 
 def distance(theta):
     temperature = theta[0] * u.K
     model = planet.transit_depth(temperature).flux
-    return abs(r2_score(example_spectrum[:, 1], model) - 1)
+    depth_difference_simulated = abs((model[off_h_band].mean() -
+                                      model[on_h_band].mean()) /
+                                     model[off_h_band].mean())
+    return abs(depth_difference_simulated - depth_difference_observed)
 
 
 init_temp = 1500
 n_steps = 1500
 
-#thresholds = [1.5, 1.1, 1.0]
-thresholds = [0.8, 0.4, 0.25]
+thresholds = [1e-3, 2e-4, 1e-4]
 
 for threshold in thresholds:
     # Create chains for the distance and temperature
@@ -38,7 +57,7 @@ for threshold in thresholds:
     while len(temperature_chain) < n_steps:
         # Generate a trial temperature
         total_steps += 1
-        trial_temp = temperature_chain[i] + 100 * np.random.randn()
+        trial_temp = temperature_chain[i] + 10 * np.random.randn()
 
         # Measure the distance between the trial step and observations
         trial_dist = distance([trial_temp])
